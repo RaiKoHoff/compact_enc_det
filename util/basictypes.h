@@ -23,16 +23,18 @@
 
 #include "util/port.h"    // Types that only need exist on certain systems
 
-#ifndef COMPILER_MSVC
+// ---------------------------------------------------------------------
+
+#ifndef _MSC_VER
 // stdint.h is part of C99 but MSVC doesn't have it.
 #include <stdint.h>         // For intptr_t.
-#endif
 
 typedef signed char         schar;
 typedef signed char         int8;
 typedef short               int16;
 // TODO(mbelshe) Remove these type guards.  These are
 //               temporary to avoid conflicts with npapi.h.
+
 #ifndef _INT32
 #define _INT32
 typedef int                 int32;
@@ -74,6 +76,53 @@ typedef unsigned long long uint64;
 // and it should always be the signed version of whatever int32 is.)
 typedef signed int         char32;
 
+// ---------------------------------------------------------------------
+#else //_MSC_VER
+// ---------------------------------------------------------------------
+
+typedef signed char         schar;
+typedef signed char         int8;
+typedef __int16             int16;
+// TODO(mbelshe) Remove these type guards.  These are
+//               temporary to avoid conflicts with npapi.h.
+
+#ifndef _INT32
+#define _INT32
+typedef __int32              int32;
+#endif
+
+typedef __int64              int64;
+
+// NOTE: unsigned types are DANGEROUS in loops and other arithmetical
+// places.  Use the signed types unless your variable represents a bit
+// pattern (eg a hash value) or you really need the extra bit.  Do NOT
+// use 'unsigned' to express "this value should always be positive";
+// use assertions for this.
+
+typedef unsigned char        uint8;
+typedef unsigned __int16     uint16;
+// TODO(mbelshe) Remove these type guards.  These are
+//               temporary to avoid conflicts with npapi.h.
+#ifndef _UINT32
+#define _UINT32
+typedef unsigned __int32     uint32;
+#endif
+
+// See the comment above about NSPR and 64-bit.
+typedef unsigned __int64     uint64;
+
+// A type to represent a Unicode code-point value. As of Unicode 4.0,
+// such values require up to 21 bits.
+// (For type-checking on pointers, make this explicitly signed,
+// and it should always be the signed version of whatever int32 is.)
+typedef __int32              char32;
+
+#endif
+// ---------------------------------------------------------------------
+
+#pragma warning( push )  
+#pragma warning( disable : 4310 )  
+
 const uint8  kuint8max  = (( uint8) 0xFF);
 const uint16 kuint16max = ((uint16) 0xFFFF);
 const uint32 kuint32max = ((uint32) 0xFFFFFFFF);
@@ -86,6 +135,8 @@ const  int32 kint32min  = (( int32) 0x80000000);
 const  int32 kint32max  = (( int32) 0x7FFFFFFF);
 const  int64 kint64min  = (( int64) GG_LONGLONG(0x8000000000000000));
 const  int64 kint64max  = (( int64) GG_LONGLONG(0x7FFFFFFFFFFFFFFF));
+
+#pragma warning( pop )  
 
 // A macro to disallow the copy constructor and operator= functions
 // This should be used in the private: declarations for a class

@@ -1116,7 +1116,7 @@ static const char kMiniUTF8UTF8Odd[8][16] = {
 // Turn a pair of bytes into the subscript for UTF8UTF8 tables above
 int UTF88Sub(char s0, char s1) {
   int sub = (s1 >> 4) & 0x03;
-  uint8 u0 = static_cast<uint8>(s0);
+  auto u0 = static_cast<uint8>(s0);
   if (u0 == 0xc3) {
     sub += 12;
   } else if ((u0 & 0xf0) == 0xc0) {
@@ -1272,7 +1272,7 @@ static inline const char* MyRankedEncName(int r_enc) {
 static const int kPsSourceWidth = 32;
 static int pssourcenext = 0;    // debug only. not threadsafe. dump only >= this
 static int pssourcewidth = 0;   // debug only.
-static char* pssource_mark_buffer = NULL;
+static char* pssource_mark_buffer = nullptr;
 int next_do_src_line;
 int do_src_offset[16];
 
@@ -1300,12 +1300,12 @@ void PsSourceFinish() {
   memset(pssource_mark_buffer + (pssourcewidth * 2), '\0', 8);
 
   delete[] pssource_mark_buffer;
-  pssource_mark_buffer = NULL;
+  pssource_mark_buffer = nullptr;
 }
 
 // Dump aligned len bytes src... if not already dumped
 void PsSource(const uint8* src, const uint8* isrc, const uint8* srclimit) {
-  int offset = src - isrc;
+  auto offset = static_cast<int>(src - isrc);
   offset -= (offset % pssourcewidth);     // round down to multiple of len bytes
   if (offset < pssourcenext) {
     return;
@@ -1322,7 +1322,7 @@ void PsSource(const uint8* src, const uint8* isrc, const uint8* srclimit) {
 
   // Print source bytes
   const uint8* src_aligned = isrc + offset;
-  int length = srclimit - src_aligned;
+  auto length = static_cast<int>(srclimit - src_aligned);
   length = minint(pssourcewidth, length);
 
   fprintf(stderr, "(%05x ", offset);
@@ -1351,7 +1351,7 @@ void PsSource(const uint8* src, const uint8* isrc, const uint8* srclimit) {
 
 // Mark bytes in just-previous source bytes
 void PsMark(const uint8* src, int len, const uint8* isrc, int weightshift) {
-  int offset = src - isrc;
+  auto offset = static_cast<int>(src - isrc);
   offset = (offset % pssourcewidth);     // mod len bytes
   char mark = (weightshift == 0) ? '-' : 'x';
 
@@ -1368,7 +1368,7 @@ void PsMark(const uint8* src, int len, const uint8* isrc, int weightshift) {
 // Unfortunately, we have to skip back N lines since source was printed for
 // up to 8 bigrams before we get here. Match on src+1 to handle 0/31 better
 void PsHighlight(const uint8* src, const uint8* isrc, int trigram_val, int n) {
-  int offset = (src + 1) - isrc;
+  auto offset = static_cast<int>((src + 1) - isrc);
   int offset32 = (offset % pssourcewidth);    // mod len bytes
   offset -= offset32;                     // round down to multiple of len bytes
 
@@ -1383,12 +1383,12 @@ void PsHighlight(const uint8* src, const uint8* isrc, int trigram_val, int n) {
 
 
 void InitDetectEncodingState(DetectEncodingState* destatep) {
-  destatep->initial_src = NULL;       // Filled in by caller
-  destatep->limit_src = NULL;
-  destatep->prior_src = NULL;
-  destatep->last_pair = NULL;
+  destatep->initial_src = nullptr;       // Filled in by caller
+  destatep->limit_src = nullptr;
+  destatep->prior_src = nullptr;
+  destatep->last_pair = nullptr;
 
-  destatep->debug_data = NULL;
+  destatep->debug_data = nullptr;
   destatep->next_detail_entry = 0;
 
   destatep->done = false;
@@ -1410,14 +1410,14 @@ void InitDetectEncodingState(DetectEncodingState* destatep) {
   destatep->utf7_starts = 0;
   destatep->prior_utf7_offset = 0;
   destatep->next_utf8_ministate = 0;
-  for (int i = 0; i < 6; i++) {destatep->utf8_minicount[i] = 0;}
+  for (int & i : destatep->utf8_minicount) {i = 0;}
   destatep->next_utf8utf8_ministate = 0;
   destatep->utf8utf8_odd_byte = 0;
-  for (int i = 0; i < 6; i++) {destatep->utf8utf8_minicount[i] = 0;}
+  for (int & i : destatep->utf8utf8_minicount) {i = 0;}
   destatep->next_2022_state = SOSI_NONE;
   destatep->next_hz_state = SOSI_NONE;
   destatep->next_eucjp_oddphase = false;
-  for (int i = 0; i < 8; i++) {destatep->byte32_count[i] = 0;}
+  for (int & i : destatep->byte32_count) {i = 0;}
   destatep->active_special = 0xffffffff;
   destatep->tld_hint = UNKNOWN_ENCODING;
   destatep->http_hint = UNKNOWN_ENCODING;
@@ -1482,11 +1482,11 @@ void InitDetectEncodingState(DetectEncodingState* destatep) {
 
 //  {{0x6e,0x6c,0x5f,0x5f, 0x05,0xb2,0xae,0xa0,0x32,0xa1,0x36,0x31,0x42,0x39,0x3b,0x33,0x45,0x11,0x6f,0x00,}}, // "nl__"
 //        // ASCII-7-bit=178  Latin1=174  UTF8=160  GB=50  CP1252=161  BIG5=49  Latin2=66  CP1251=57  CP1256=59  CP1250=51  Latin5=69  ISO-8859-15=111  [top ASCII-7-bit]
-int ApplyCompressedProb(const char* iprob, int len,
+int ApplyCompressedProb(const unsigned char* iprob, int len,
                          int weight, DetectEncodingState* destatep) {
   int* dst = &destatep->enc_prob[0];
   int* dst2 = &destatep->hint_weight[0];
-  const uint8* prob = reinterpret_cast<const uint8*>(iprob);
+  const auto* prob = reinterpret_cast<const uint8*>(iprob);
   const uint8* problimit = prob + len;
 
   int largest = -1;
@@ -1531,8 +1531,8 @@ int ApplyCompressedProb(const char* iprob, int len,
 
 
 // Returns subscript of largest (most probable) value [for unit test]
-int TopCompressedProb(const char* iprob, int len) {
-  const uint8* prob = reinterpret_cast<const uint8*>(iprob);
+int TopCompressedProb(const unsigned char* iprob, int len) {
+  const auto* prob = reinterpret_cast<const uint8*>(iprob);
   const uint8* problimit = prob + len;
   int next_prob_sub = 0;
   int topprob = 0;
@@ -1628,7 +1628,7 @@ int ApplyTldHint(const char* url_tld_hint, int weight,
     // Never boost ASCII7; do CP1252 instead
     if (best_sub == F_ASCII_7_bit) {best_sub = F_CP1252;}
     destatep->declared_enc_1 = best_sub;
-    if (destatep->debug_data != NULL) {
+    if (destatep->debug_data != nullptr) {
       // Show TLD hint
       SetDetailsEncProb(destatep, 0, best_sub, url_tld_hint);
     }
@@ -1787,7 +1787,7 @@ int ApplyCharsetHint(const char* charset_hint, int weight,
       }
     }
 
-    if (destatep->debug_data != NULL) {
+    if (destatep->debug_data != nullptr) {
       // Show charset hint
       SetDetailsEncProb(destatep, 0, best_sub, charset_hint);
     }
@@ -1827,7 +1827,7 @@ int ApplyCharsetHint(const char* charset_hint, int weight,
 // Not operator used instead of unary minus to allow specifying not-zero
 int ApplyEncodingHint(const int encoding_hint, int weight,
                        DetectEncodingState* destatep) {
-  Encoding enc_hint = static_cast<Encoding>((encoding_hint < 0) ?
+  auto enc_hint = static_cast<Encoding>((encoding_hint < 0) ?
                                             ~encoding_hint : encoding_hint);
   // Map to the right internal subscript
   int rankedenc_hint = CompactEncDet::BackmapEncodingToRankedEncoding(enc_hint);
@@ -1841,7 +1841,7 @@ int ApplyEncodingHint(const int encoding_hint, int weight,
     destatep->enc_prob[rankedenc_hint] += increment;
   }
 
-  if (destatep->debug_data != NULL) {
+  if (destatep->debug_data != nullptr) {
     // Show encoding hint
     SetDetailsEncProb(destatep, 0, -1, MyEncodingName(enc_hint));
   }
@@ -1866,7 +1866,7 @@ int ApplyUILanguageHint(const Language language_hint,
     // Never boost ASCII7; do CP1252 instead
     if (best_sub == F_ASCII_7_bit) {best_sub = F_CP1252;}
     destatep->declared_enc_1 = best_sub;
-    if (destatep->debug_data != NULL) {
+    if (destatep->debug_data != nullptr) {
       // Show language hint
       SetDetailsEncProb(destatep, 0, best_sub, normalized_lang.c_str());
     }
@@ -1890,6 +1890,7 @@ int ApplyDefaultHint(const CompactEncDet::TextCorpusType corpus_type,
     if (SevenBitEncoding(kMapToEncoding[i])) {
       destatep->enc_prob[i] = 0;
     }
+    (void)weight;
   }
 
   //  A little corpus distinction
@@ -1908,12 +1909,12 @@ int ApplyDefaultHint(const CompactEncDet::TextCorpusType corpus_type,
 
   if (FLAGS_demo_nodefault) {
     // Demo, make initial probs all zero
-    for (int i = 0; i < NUM_RANKEDENCODING; i++) {
-      destatep->enc_prob[i] = 0;
+    for (int & i : destatep->enc_prob) {
+      i = 0;
     }
   }
 
-  if (destatep->debug_data != NULL) {
+  if (destatep->debug_data != nullptr) {
     // Show default hint
     SetDetailsEncProb(destatep, 0, -1, "Default");
   }
@@ -1929,7 +1930,7 @@ const char* MyMemrchr(const char* str, char c, size_t len) {
   while (str <= --ret) {
     if (*ret == c) {return ret;}
   }
-  return NULL;
+  return nullptr;
 }
 
 
@@ -1947,12 +1948,12 @@ void ExtractTLD(const char* url_hint, char* tld_hint, int tld_hint_len,
   // Extract the TLD from a full URL and use it for
   // a normal TLD hint
 
-  strncpy(tld_hint, "~", tld_hint_len);
+  strncpy_s(tld_hint, tld_hint_len, "~", tld_hint_len);
   tld_hint[tld_hint_len - 1] = '\0';
-  *ret_host_start = NULL;
+  *ret_host_start = nullptr;
   *ret_host_len = 0;
 
-  int url_len = (url_hint != NULL) ? strlen(url_hint) : 0;
+  int url_len = (url_hint != nullptr) ? static_cast<int>(strlen(url_hint)) : 0;
   if (url_len == 0) {
     // Empty TLD
     return;
@@ -1962,30 +1963,30 @@ void ExtractTLD(const char* url_hint, char* tld_hint, int tld_hint_len,
   if (kMinURLLength <= url_len) {
     // See if it really is a URL
     const char* first_slash = strchr(url_hint, '/');
-    if ((first_slash != NULL) && (first_slash != url_hint) &&
+    if ((first_slash != nullptr) && (first_slash != url_hint) &&
         (first_slash[-1] == ':') && (first_slash[1] == '/') &&
-        (memrchr(url_hint, '.', first_slash - url_hint) == NULL)) {
+        (memrchr(url_hint, '.', first_slash - url_hint) == nullptr)) {
       // We found :// and no dot in front of it, so declare a real URL
 
       const char* hostname_start = first_slash + 2;
       const char* hostname_end = strchr(hostname_start, '/');
-      if (hostname_end == NULL) {
+      if (hostname_end == nullptr) {
         // No slash; end is first byte off end of the URL string
         hostname_end = url_hint + url_len;
       }
       size_t hostname_len = hostname_end - hostname_start;
-      const char* port_start =
+      const auto* port_start =
         (const char*)memchr(hostname_start, ':', hostname_len);
-      if (port_start != NULL) {
+      if (port_start != nullptr) {
         // Port; shorten hostname
         hostname_end = port_start;
         hostname_len = hostname_end - hostname_start;
       }
 
       const char* tld_start = MyMemrchr(hostname_start, '.', hostname_len);
-      if (tld_start != NULL) {
+      if (tld_start != nullptr) {
         // Remember the TLD we just found
-        int tld_len = hostname_start + hostname_len - tld_start - 1;
+        auto tld_len = static_cast<int>(hostname_start + hostname_len - tld_start - 1);
         if (tld_len > (tld_hint_len - 1)) {
           tld_len = tld_hint_len - 1;
         }
@@ -1993,11 +1994,11 @@ void ExtractTLD(const char* url_hint, char* tld_hint, int tld_hint_len,
         tld_hint[tld_len] = '\0';
       }
       *ret_host_start = hostname_start;
-      *ret_host_len = hostname_len;
+      *ret_host_len = (int)hostname_len;
       return;
     }
   } else {
-    strncpy(tld_hint, url_hint, tld_hint_len);
+    strncpy_s(tld_hint, tld_hint_len, url_hint, tld_hint_len);
     tld_hint[tld_hint_len - 1] = '\0';
   }
 }
@@ -2017,7 +2018,7 @@ void ApplyHints(const char* url_hint,
   // a normal TLD hint
 
   char tld_hint[16];
-  const char* hostname_start = NULL;
+  const char* hostname_start = nullptr;
   int hostname_len = 0;
   ExtractTLD(url_hint, tld_hint, sizeof(tld_hint),
              &hostname_start, &hostname_len);
@@ -2034,7 +2035,7 @@ void ApplyHints(const char* url_hint,
   // This does better on multiple hints that a weighted average
 
   // Weight is 0..100 percent
-  if ((http_charset_hint != NULL) && (http_charset_hint[0] != '~')) {
+  if ((http_charset_hint != nullptr) && (http_charset_hint[0] != '~')) {
     destatep->declared_enc_2 = destatep->declared_enc_1;
     hint_count += ApplyCharsetHint(http_charset_hint, 100, destatep);
     destatep->http_hint = kMapToEncoding[destatep->declared_enc_1];
@@ -2043,7 +2044,7 @@ void ApplyHints(const char* url_hint,
       destatep->looking_for_latin_trigrams = true;
     }
   }
-  if ((meta_charset_hint != NULL) && (meta_charset_hint[0] != '~')) {
+  if ((meta_charset_hint != nullptr) && (meta_charset_hint[0] != '~')) {
     destatep->declared_enc_2 = destatep->declared_enc_1;
     hint_count += ApplyCharsetHint(meta_charset_hint, 100, destatep);
     destatep->meta_hint = kMapToEncoding[destatep->declared_enc_1];
@@ -2061,7 +2062,7 @@ void ApplyHints(const char* url_hint,
     hint_count += ApplyUILanguageHint(language_hint, 50, destatep);
   }
   // Use top level domain if not .com and <=1 other hint was available
-  if (url_hint != NULL) {
+  if (url_hint != nullptr) {
     destatep->tld_hint = CompactEncDet::TopEncodingOfTLDHint(tld_hint);
     if (hint_count == 0) {
       // Apply with weight 100%
@@ -2140,7 +2141,7 @@ void ApplyHints(const char* url_hint,
   // destatep->enc_prob[F_ASCII_7_bit] = destatep->enc_prob[F_ASCII_7_bit] + kSmallInitDiff;
   // destatep->enc_prob[F_BINARY] = destatep->enc_prob[F_BINARY] - (kBoostInitial / 2);
 
-  if (destatep->debug_data != NULL) {
+  if (destatep->debug_data != nullptr) {
     // Show state at end of hints
     SetDetailsEncProb(destatep, 0, -1, "Endhints");
     if(FLAGS_enc_detect_detail2) {
@@ -2164,7 +2165,7 @@ void ApplyHints(const char* url_hint,
   if (FLAGS_force127) {
     destatep->do_latin_trigrams = true;
     if (FLAGS_enc_detect_source) {
-      PsHighlight(0, destatep->initial_src, 0, 2);
+      PsHighlight(nullptr, destatep->initial_src, 0, 2);
     }
   }
 
@@ -2408,7 +2409,7 @@ void InitialBytesBoost(const uint8* src,
   // 2011.11.07 never use UTF8CP1252 -- answer will be UTF8 instead
   Whack(destatep, F_UTF8CP1252, kBadPairWhack * 8);
 
-  if (destatep->debug_data != NULL) {
+  if (destatep->debug_data != nullptr) {
     // Show first four bytes of the input
     char buff[16];
     snprintf(buff, sizeof(buff), "%04x%04x", pair01, pair23);
@@ -2420,8 +2421,8 @@ void InitialBytesBoost(const uint8* src,
 
 // Descending order
 int IntCompare(const void* v1, const void* v2) {
-  const int* p1 = reinterpret_cast<const int*>(v1);
-  const int* p2 = reinterpret_cast<const int*>(v2);
+  const auto* p1 = reinterpret_cast<const int*>(v1);
+  const auto* p2 = reinterpret_cast<const int*>(v2);
   if (*p1 < *p2) {return 1;}
   if (*p1 > *p2) {return -1;}
   return 0;
@@ -2450,7 +2451,7 @@ int Base64ScanLen(const uint8* start, const uint8* limit) {
   while ((b64str < b64strlimit) && (kBase64Value[*b64str++] >= 0))  {
   }
   b64str--;      // We overshot by 1
-  return b64str - ib64str;
+  return static_cast<int>(b64str - ib64str);
 }
 
 // Input is at least 8-character legal base64 string after +.
@@ -2466,7 +2467,7 @@ bool GoodUnicodeFromBase64(const uint8* start, const uint8* limit) {
   int lower_count = 0;
   int upper_count = 0;
   int digit_count = 0;
-  int len = limit - start;
+  auto len = static_cast<int>(limit - start);
   for (const uint8* src = start; src < limit; ++src) {
     uint8 c = *src;
     if (('a' <= c) && (c <= 'z')) {
@@ -2564,6 +2565,7 @@ void HzBoostWhack(DetectEncodingState* destatep, uint8 byte1, uint8 byte2) {
   } else {
     Whack(destatep, F_HZ_GB_2312, kBadPairWhack);         // Illegal pair
   }
+  (void)byte1;
 }
 
 // Boost, whack, or leave alone BINARY probablilty
@@ -2644,8 +2646,8 @@ int CheckUTF8Seq(DetectEncodingState* destatep, int weightshift) {
     // Demote four byte patterns that are more likely Latin1 than UTF-8
     // C9AE, DF92, DF93, DFAB. See note at top.
     // Demotion also boosts Latin1 and CP1252
-    uint8 s0 = static_cast<uint8>(s[0]);
-    uint8 s1 = static_cast<uint8>(s[1]);
+    auto s0 = static_cast<uint8>(s[0]);
+    auto s1 = static_cast<uint8>(s[1]);
     if ((s0 == 0xc9) && (s1 == 0xae)) {++demotion_count;}
     if ((s0 == 0xdf) && (s1 == 0x92)) {++demotion_count;}
     if ((s0 == 0xdf) && (s1 == 0x93)) {++demotion_count;}
@@ -2802,8 +2804,8 @@ int CheckUTF8UTF8Seq(DetectEncodingState* destatep, int weightshift) {
 // Expecting 0000PPxx 0000QQxx where PP mostly = QQ (UTF-32BE)
 // Expecting xxPP0000 xxQQ0000 where PP mostly = QQ (UTF-32LE)
 void CheckUTF32ActiveSeq(DetectEncodingState* destatep) {
-  // Not needed
-  return;
+  (void)destatep;// Not needed
+  //return;
 }
 
 // We give a gentle boost for each paired SO ... SI, whack others
@@ -2941,8 +2943,8 @@ void CheckEucJpSeq(DetectEncodingState* destatep) {
       Boost(destatep, F_EUC_JP, kGentlePairBoost * 2);
     }
 
-    uint8 s0 = static_cast<uint8>(s[0]);
-    uint8 s1 = static_cast<uint8>(s[1]);
+    auto s0 = static_cast<uint8>(s[0]);
+    auto s1 = static_cast<uint8>(s[1]);
     // Look for phase flip at 8F
     if ((s0 & 0x80) == 0x00) {
       destatep->next_eucjp_oddphase = false;
@@ -2969,7 +2971,7 @@ void CheckBinaryDensity(const uint8* src, DetectEncodingState* destatep,
   int next_pair = destatep->next_interesting_pair[OtherPair];
 
   // Look at density of interesting pairs [0..src)
-  int delta_offset =  static_cast<int>(src - destatep->initial_src);   // actual
+  auto delta_offset =  static_cast<int>(src - destatep->initial_src);   // actual
 
   // Look at density of interesting pairs [0..next_interesting)
   int low_byte = destatep->interesting_offsets[OtherPair][0];
@@ -3040,7 +3042,7 @@ void ActiveSpecialBoostWhack(const uint8* src, DetectEncodingState* destatep) {
       if (byte1 == '+') {
         // Boost, whack, or leave alone UTF-7 probablilty
         UTF7BoostWhack(destatep, next_pair, byte2);
-        if (destatep->debug_data != NULL) {
+        if (destatep->debug_data != nullptr) {
           // Show UTF7 entry
           char buff[16];
           snprintf(buff, sizeof(buff), "%02x%02x+", byte1, byte2);
@@ -3052,7 +3054,7 @@ void ActiveSpecialBoostWhack(const uint8* src, DetectEncodingState* destatep) {
       } else if (byte1 == '~') {
         // Boost, whack, or leave alone HZ probablilty
         HzBoostWhack(destatep, byte1, byte2);
-        if (destatep->debug_data != NULL) {
+        if (destatep->debug_data != nullptr) {
           // Show Hz entry
           char buff[16];
           snprintf(buff, sizeof(buff), "%02x%02x~", byte1, byte2);
@@ -3094,7 +3096,7 @@ void ActiveSpecialBoostWhack(const uint8* src, DetectEncodingState* destatep) {
           // 00 is illegal for all other encodings, so it doesn't matter to them
           UTF16MakeEven(destatep, next_pair);
         }
-        if (destatep->debug_data != NULL) {
+        if (destatep->debug_data != nullptr) {
           // Show 0000 detail entry for this bigram
           char buff[16];
           snprintf(buff, sizeof(buff), "%02x%02xZ", byte1, byte2);
@@ -3108,7 +3110,7 @@ void ActiveSpecialBoostWhack(const uint8* src, DetectEncodingState* destatep) {
         if (byte2 == 0xff) {
           UTF1632BoostWhack(destatep, off, byte1);
         }
-        if (destatep->debug_data != NULL) {
+        if (destatep->debug_data != nullptr) {
           // Show FFFF detail entry for this bigram
           char buff[16];
           snprintf(buff, sizeof(buff), "%02x%02xF", byte1, byte2);
@@ -3156,7 +3158,7 @@ void ActiveSpecialBoostWhack(const uint8* src, DetectEncodingState* destatep) {
   }
   // ISO-2022 do OK on their own, using stright probabilities? Not on bad bytes
 
-  if (destatep->debug_data != NULL) {
+  if (destatep->debug_data != nullptr) {
     // Show sequencing result
     SetDetailsEncLabel(destatep, "seq");
   }
@@ -3713,7 +3715,7 @@ int TrigramValue(const uint8* trisrc) {
   int byte1_p = kMapToFiveBits[trisrc[1]];
   int byte2_p = kMapToFiveBits[trisrc[2]];
   int subscr = ((byte0_p) << 5) | byte1_p;
-  int temp = static_cast<int>((kLatin127Trigrams[subscr] >> (byte2_p * 2)));
+  auto temp = static_cast<int>((kLatin127Trigrams[subscr] >> (byte2_p * 2)));
   //printf("%s=%d ", Latin127Str((subscr << 5) | byte2_p), temp & 3);
   return temp & 3;
 }
@@ -3725,7 +3727,7 @@ bool BoostLatin127Trigrams(int tri_block_offset,
                            DetectEncodingState* destatep) {
   //printf("BoostLatin127Trigrams[%06x]\n", tri_block_offset);
   int excess_latin27 = 0;
-  int srclen = destatep->limit_src - destatep->initial_src;
+  auto srclen = static_cast<int>(destatep->limit_src - destatep->initial_src);
   int hi_limit = minint(tri_block_offset + 32, srclen - 2);
   const uint8* trisrc = &destatep->initial_src[tri_block_offset];
   const uint8* trisrclimit = &destatep->initial_src[hi_limit];
@@ -3795,7 +3797,7 @@ void BoostPrune(const uint8* src, DetectEncodingState* destatep,
         destatep->enc_prob[i] += scaled_delta;
       }
       destatep->hints_derated = true;
-      if (destatep->debug_data != NULL) {
+      if (destatep->debug_data != nullptr) {
         // Show derated-hint result
         char buff[32];
         snprintf(buff, sizeof(buff), "Hints %d/%d", m, kDerateHintsBelow);
@@ -3986,7 +3988,7 @@ void BoostPrune(const uint8* src, DetectEncodingState* destatep,
     // TODO: boost subset/superset also
     // Boost(destatep, kRelatedEncoding[best_enc], kBestEncBoost);
 
-    if (destatep->debug_data != NULL) {
+    if (destatep->debug_data != nullptr) {
       // Show detail entry for this bigram
       char buff[16];
       snprintf(buff, sizeof(buff), "%c%02x%02x%c%c",
@@ -4114,7 +4116,7 @@ void BoostPrune(const uint8* src, DetectEncodingState* destatep,
         }
       }
     }
-    if (destatep->debug_data != NULL) {
+    if (destatep->debug_data != nullptr) {
       SetDetailsEncLabel(destatep, "pre-final");
     }
   }
@@ -4125,7 +4127,7 @@ void BoostPrune(const uint8* src, DetectEncodingState* destatep,
   ReRank(destatep);
 
   if (prunereason == PRUNE_SLOWEND) {
-    if (destatep->debug_data != NULL) {
+    if (destatep->debug_data != nullptr) {
       SetDetailsEncLabel(destatep, "slow-end");
     }
   }
@@ -4177,7 +4179,7 @@ void BoostPrune(const uint8* src, DetectEncodingState* destatep,
     }
   }
 
-  if (destatep->debug_data != NULL) {
+  if (destatep->debug_data != nullptr) {
     char buff[32];
     snprintf(buff, sizeof(buff), "%d prune", prune_diff / XLOG2);
     SetDetailsEncLabel(destatep, buff);
@@ -4276,7 +4278,7 @@ void BoostPrune(const uint8* src, DetectEncodingState* destatep,
       }
     }
 
-    if (destatep->debug_data != NULL) {
+    if (destatep->debug_data != nullptr) {
       char buff[32];
       snprintf(buff, sizeof(buff), "final %d",
                static_cast<int>(src - destatep->initial_src));
@@ -4397,7 +4399,7 @@ bool IncrementAndBoostPrune(const uint8* src,
       destatep->done = true;
     }
   } else {
-    int offset = static_cast<int>(src - destatep->initial_src);
+    auto offset = static_cast<int>(src - destatep->initial_src);
     destatep->interesting_pairs[whatset][next_pair * 2 + 0] = byte1;
     destatep->interesting_pairs[whatset][next_pair * 2 + 1] = byte2;
     destatep->interesting_offsets[whatset][next_pair] = offset;
@@ -4461,7 +4463,7 @@ void DumpDetail(DetectEncodingState* destatep) {
   // Now print
   for (int z = 0; z < destatep->next_detail_entry; ++z) {
     // Highlight some entries ending in '!' with light red underbar
-    int len = destatep->debug_data[z].label.size();
+    auto len = static_cast<int>(destatep->debug_data[z].label.size());
     if (destatep->debug_data[z].label[len - 1] == '!') {
       fprintf(stderr, "1 0.9 0.9 do-flag\n");
     }
@@ -4532,7 +4534,7 @@ void DumpReliable(DetectEncodingState* destatep) {
 // Scan short single lines quickly for all printable ASCII
 // Return true if all bytes are in [20..7F], false otherwise
 bool QuickPrintableAsciiScan(const char* text, int text_length) {
-  const uint8* src = reinterpret_cast<const uint8*>(text);
+  const auto* src = reinterpret_cast<const uint8*>(text);
   const uint8* srclimit = src + text_length;
   const uint8* srclimit8 = srclimit - 7;
   while (src < srclimit8) {
@@ -4609,6 +4611,7 @@ const uint8* SkipToTagEnd(const uint8* isrc, const uint8* src, const uint8* srcl
       return ss;
     }
   }
+  (void)isrc;
   return src + 2;     // Always make progress, Otherwise we get an infinite loop
 }
 
@@ -4678,7 +4681,7 @@ Encoding Rescore(Encoding enc, const uint8* isrc,
   bool rescore_change = false;
 
   int count = destatep->next_interesting_pair[OtherPair];
-  int text_length = srctextlimit - isrc;
+  auto text_length = static_cast<int>(srctextlimit - isrc);
   for (int i = 0; i < count; ++i) {
     int bigram_offset = destatep->interesting_offsets[OtherPair][i];
     uint8 byte0 = (0 < bigram_offset) ?
@@ -4736,7 +4739,7 @@ Encoding Rescore(Encoding enc, const uint8* isrc,
     ReRank(destatep);
     new_enc = kMapToEncoding[destatep->top_rankedencoding];
 
-    if (destatep->debug_data != NULL) {
+    if (destatep->debug_data != nullptr) {
       char buff[32];
       snprintf(buff, sizeof(buff), "=Rescore %s", MyEncodingName(new_enc));
       SetDetailsEncProb(destatep,
@@ -4792,7 +4795,7 @@ int RobustScan(const char* text,
     robust_renc_probs[i] = 0;
   }
   int max_fast_len = minint(text_length, (kMaxKBToRobustScan << 10));
-  const uint8* isrc = reinterpret_cast<const uint8*>(text);
+  const auto* isrc = reinterpret_cast<const uint8*>(text);
   const uint8* src = isrc;
   const uint8* srclimitfast2 = isrc + max_fast_len - 1;
   const uint8* srclimitfast4 = isrc + max_fast_len - 3;
@@ -4904,14 +4907,14 @@ Encoding Rescan(Encoding enc,
 
   if (FLAGS_counts) {++rescan_used;}
 
-  int scanned_bytes = src - isrc;
-  int unscanned_bytes = srctextlimit - src;
-  int text_length = srctextlimit - isrc;
+  auto scanned_bytes = static_cast<int>(src - isrc);
+  auto unscanned_bytes = static_cast<int>(srctextlimit - src);
+  auto text_length = static_cast<int>(srctextlimit - isrc);
   bool empty_rescan = true;
 
   // See if enough bytes left to bother doing rescan
   if (kMinRescanLength < unscanned_bytes) {
-    const char* text = reinterpret_cast<const char*>(isrc);
+    const auto* text = reinterpret_cast<const char*>(isrc);
 
     Encoding one_hint = destatep->http_hint;
     if ((one_hint == UNKNOWN_ENCODING) &&
@@ -4944,7 +4947,7 @@ Encoding Rescan(Encoding enc,
     }
     CHECK(middle_offset <= text_length);
 
-    if (destatep->debug_data != NULL) {
+    if (destatep->debug_data != nullptr) {
       SetDetailsEncLabel(destatep, ">> Rescan");
       // Print the current chart before recursive call
       DumpDetail(destatep);
@@ -4958,7 +4961,7 @@ Encoding Rescan(Encoding enc,
     int mid_bytes_consumed;
     bool mid_is_reliable;
     Encoding mid_second_best_enc;
-    CEDInternalFlags newflags = static_cast<CEDInternalFlags>(
+    auto newflags = static_cast<CEDInternalFlags>(
       kCEDRescanning + kCEDForceTags);
     // Recursive call for rescan of half of remaining
     Encoding mid_enc = InternalDetectEncoding(
@@ -5034,7 +5037,7 @@ Encoding Rescan(Encoding enc,
 
       // Separate simple scan
       // =====================
-      if (destatep->debug_data != NULL) {
+      if (destatep->debug_data != nullptr) {
         SetDetailsEncLabel(destatep, ">> RobustScan");
         // Print the current chart before recursive call
         DumpDetail(destatep);
@@ -5057,7 +5060,7 @@ Encoding Rescan(Encoding enc,
         }
       }
 
-      if (destatep->debug_data != NULL) {
+      if (destatep->debug_data != nullptr) {
         char buff[32];
         snprintf(buff, sizeof(buff), "=Robust[%d] %s",
                  bigram_count, MyEncodingName(new_enc));
@@ -5138,7 +5141,7 @@ Encoding InternalDetectEncoding(
   std::unique_ptr<DetailEntry[]> scoped_debug_data;
   if (FLAGS_enc_detect_detail) {
     // Allocate max 10 details per bigram
-    scoped_debug_data.reset(new DetailEntry[kMaxPairs * 10]);
+    scoped_debug_data = std::make_unique<DetailEntry[]>(kMaxPairs * 10);
     destate.debug_data = scoped_debug_data.get();
     // NOTE: destate and scoped_debug_data have exactly the same scope
     // All other FLAGS_enc_detect_detail tests use destate.debug_data != NULL
@@ -5158,7 +5161,7 @@ Encoding InternalDetectEncoding(
   // especilly in the case of a very short text whose only interesting
   // information is a 3-byte UTF-8 character in the last three bytes.
   // If necessary, we fake a last bigram with 0x20 space as a pad byte.
-  const uint8* isrc = reinterpret_cast<const uint8*>(text);
+  const auto* isrc = reinterpret_cast<const uint8*>(text);
   const uint8* src = isrc;
   const uint8* srctextlimit = isrc + text_length;
   const uint8* srclimitslow2 = isrc + slow_len - 1;
@@ -5180,7 +5183,7 @@ Encoding InternalDetectEncoding(
   }
   int exit_reason = 0;
 
-  if (destate.debug_data != NULL) {
+  if (destate.debug_data != nullptr) {
     BeginDetail(&destate);
     // Take any incoming watch encoding name and backmap to the corresponding
     // ranked enum value
@@ -5261,7 +5264,7 @@ Encoding InternalDetectEncoding(
         PsMark(src, 2, isrc, weightshift);
       }
       // Saves byte pair and offset
-      bool pruned = IncrementAndBoostPrune(src, srctextlimit - src,
+      bool pruned = IncrementAndBoostPrune(src, static_cast<int>(srctextlimit - src),
                                            &destate, weightshift, exit_reason);
       // Advance; if inside tag, advance to end of tag
       if (weightshift == 0) {
@@ -5293,7 +5296,7 @@ Encoding InternalDetectEncoding(
       // The very last byte is an interesting byte
       // Saves byte pair and offset
       //printf("Interesting very last slow byte = 0x%02x\n", *src);
-      IncrementAndBoostPrune(src, srctextlimit - src, &destate, 0, exit_reason);
+      IncrementAndBoostPrune(src, static_cast<int>(srctextlimit - src), &destate, 0, exit_reason);
       very_last_byte_incremented = true;
     }
   }
@@ -5344,7 +5347,7 @@ Encoding InternalDetectEncoding(
           PsMark(src, 2, isrc, 0);
         }
         // saves byte pair and offset
-        bool pruned = IncrementAndBoostPrune(src, srctextlimit - src,
+        bool pruned = IncrementAndBoostPrune(src, static_cast<int>(srctextlimit - src),
                                              &destate, 0, exit_reason);
         src += exit_reason;               // 1 Ascii, 2 other
         if (pruned) {
@@ -5364,7 +5367,7 @@ Encoding InternalDetectEncoding(
         // The very last byte is an interesting byte
         // Saves byte pair and offset
         //printf("Interesting very last fast byte = 0x%02x\n", *src);
-        IncrementAndBoostPrune(src, srctextlimit - src, &destate, 0, exit_reason);
+        IncrementAndBoostPrune(src, static_cast<int>(srctextlimit - src), &destate, 0, exit_reason);
         very_last_byte_incremented = true;
       }
     }
@@ -5385,7 +5388,7 @@ Encoding InternalDetectEncoding(
   if (FLAGS_enc_detect_source) {
     PsSourceFinish();
   }
-  if (destate.debug_data != NULL) {
+  if (destate.debug_data != nullptr) {
     //// DumpDetail(&destate);
   }
 
@@ -5395,7 +5398,7 @@ Encoding InternalDetectEncoding(
     // There were some interesting bytes, but only in tag text.
     // Recursive call to reprocess looking at the tags this time.
 
-    if (destate.debug_data != NULL) {
+    if (destate.debug_data != nullptr) {
       SetDetailsEncLabel(&destate, ">> Recurse/tags");
       // Print the current chart before recursive call
       DumpDetail(&destate);
@@ -5421,7 +5424,7 @@ Encoding InternalDetectEncoding(
                              is_reliable,
                              second_best_enc);
 
-    if (destate.debug_data != NULL) {
+    if (destate.debug_data != nullptr) {
       // Show winning encoding and dump PostScript
       char buff[32];
       snprintf(buff, sizeof(buff), "=2 %s", MyEncodingName(enc2));
@@ -5544,12 +5547,12 @@ Encoding InternalDetectEncoding(
     }
   }
 
-  if (destate.debug_data != NULL) {
+  if (destate.debug_data != nullptr) {
     // Dump PostScript
     DumpDetail(&destate);
   }
 
-  *bytes_consumed = src - isrc + 1;       // We looked 1 byte beyond src
+  *bytes_consumed = (int)(src - isrc + 1);       // We looked 1 byte beyond src
   *is_reliable = destate.reliable;
   return top_enc;
 }
@@ -5734,6 +5737,6 @@ Encoding CompactEncDet::TopEncodingOfCharsetHint(const char* name) {
   return kMapToEncoding[toprankenc];
 }
 
-const char* CompactEncDet::Version(void) {
+const char* CompactEncDet::Version() {
   return kVersion;
 }

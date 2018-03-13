@@ -119,7 +119,7 @@ string MakeChar44(const string& str) {
   string res("________");     // eight underscores
   int l_ptr = 0;
   int d_ptr = 0;
-  for (int i = 0; i < str.size(); ++i) {
+  for (unsigned int i = 0; i < str.size(); ++i) {
     uint8 uc = static_cast<uint8>(str[i]);
     if (kIsAlpha[uc]) {
       if (l_ptr < 4) {                  // Else ignore
@@ -148,7 +148,7 @@ string MakeChar44(const string& str) {
 string MakeChar4(const string& str) {
   string res("____");     // four underscores
   int l_ptr = 0;
-  for (int i = 0; i < str.size(); ++i) {
+  for (unsigned int i = 0; i < str.size(); ++i) {
     uint8 uc = static_cast<uint8>(str[i]);
     if (kIsAlpha[uc] | kIsDigit[uc]) {
       if (l_ptr < 4) {                  // Else ignore
@@ -166,7 +166,7 @@ string MakeChar4(const string& str) {
 string MakeChar8(const string& str) {
   string res("________");     // eight dots
   int l_ptr = 0;
-  for (int i = 0; i < str.size(); ++i) {
+  for (unsigned int i = 0; i < str.size(); ++i) {
     uint8 uc = static_cast<uint8>(str[i]);
     if (kIsAlpha[uc] | kIsDigit[uc]) {
       if (l_ptr < 8) {                  // Else ignore
