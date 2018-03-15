@@ -507,7 +507,7 @@ const char * EncodingName(const Encoding enc) {
 // TODO: Unify MimeEncodingName and EncodingName, or determine why
 // such a unification is not possible.
 
-const char * MimeEncodingName(Encoding enc) {
+const char * MimeEncodingName(const Encoding enc) {
   if ( (enc < 0) || (enc >= kNumEncodings) )
     return "";  // TODO: Should this be invalid_encoding_name()?
   return kEncodingInfoTable[enc].mime_encoding_name_;
@@ -515,7 +515,7 @@ const char * MimeEncodingName(Encoding enc) {
 
 bool EncodingFromName(const char* enc_name, Encoding *encoding) {
   *encoding = UNKNOWN_ENCODING;
-  if ( enc_name == NULL ) return false;
+  if ( enc_name == nullptr ) return false;
 
   for ( int i = 0; i < kNumEncodings; i++ ) {
     if (!base::strcasecmp(enc_name, kEncodingInfoTable[i].encoding_name_) ) {
@@ -547,7 +547,7 @@ static const EncodingMap& GetEncodingMap() {
   //
   // First, add internal encoding names returned by EncodingName().
   for (int i = 0; i < NUM_ENCODINGS; ++i) {
-    Encoding e = static_cast<Encoding>(i);
+    auto e = static_cast<Encoding>(i);
     // Internal encoding names must be unique.
     // The internal names are guaranteed to be unique by the CHECK_EQ.
     const char *encoding_name = EncodingName(e);
@@ -559,7 +559,7 @@ static const EncodingMap& GetEncodingMap() {
   // We don't override existing entries, to give precedence to entries
   // added earlier.
   for (int i = 0; i < NUM_ENCODINGS; ++i) {
-    Encoding e = static_cast<Encoding>(i);
+    auto e = static_cast<Encoding>(i);
     // Note that MimeEncodingName() can return the same mime encoding
     // name for different encoding enums like JAPANESE_SHIFT_JIS and
     // KDDI_SHIFT_JIS.  In that case, the encoding enum first seen
@@ -859,7 +859,7 @@ Encoding EncodingNameAliasToEncoding(const char *encoding_name) {
 
   const EncodingMap& encoding_map = GetEncodingMap();
 
-  EncodingMap::const_iterator emi = encoding_map.find(encoding_name);
+  auto emi = encoding_map.find(encoding_name);
   if (emi != encoding_map.end()) {
     return emi->second;
   } else {

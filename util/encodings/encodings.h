@@ -225,7 +225,7 @@ bool IsJapaneseCellPhoneCarrierSpecificEncoding(Encoding enc);
 // Given the encoding, returns its standard name.
 // Return invalid_encoding_name() if the encoding is invalid.
 //
-const char* EncodingName(Encoding enc);
+const char* EncodingName(const Encoding enc);
 
 //
 // MimeEncodingName
@@ -235,7 +235,7 @@ const char* EncodingName(Encoding enc);
 //
 // This name is suitable for using in HTTP headers, HTML tags,
 // and as the "charset" parameter of a MIME Content-Type.
-const char* MimeEncodingName(Encoding enc);
+const char* MimeEncodingName(const Encoding enc);
 
 
 // The maximum length of an encoding name

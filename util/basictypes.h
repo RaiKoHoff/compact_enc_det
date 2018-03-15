@@ -77,7 +77,11 @@ typedef unsigned long long uint64;
 typedef signed int         char32;
 
 // ---------------------------------------------------------------------
+// ---------------------------------------------------------------------
+
 #else //_MSC_VER
+
+// ---------------------------------------------------------------------
 // ---------------------------------------------------------------------
 
 typedef signed char         schar;
@@ -123,6 +127,8 @@ typedef __int32              char32;
 #pragma warning( push )  
 #pragma warning( disable : 4310 )  
 
+//TODO: @@@  investigate warning C4310: cast truncates constant value
+
 const uint8  kuint8max  = (( uint8) 0xFF);
 const uint16 kuint16max = ((uint16) 0xFFFF);
 const uint32 kuint32max = ((uint32) 0xFFFFFFFF);
@@ -137,6 +143,7 @@ const  int64 kint64min  = (( int64) GG_LONGLONG(0x8000000000000000));
 const  int64 kint64max  = (( int64) GG_LONGLONG(0x7FFFFFFFFFFFFFFF));
 
 #pragma warning( pop )  
+
 
 // A macro to disallow the copy constructor and operator= functions
 // This should be used in the private: declarations for a class
