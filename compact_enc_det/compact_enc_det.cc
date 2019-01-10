@@ -14,6 +14,12 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
+// ---------------------------------------------------------------------
+// ---  Disable/Enable some CodeAnalysis Warnings  ---
+#pragma warning ( disable: 26451)
+//#pragma warning ( enable : 6001 )
+// ---------------------------------------------------------------------
+
 #include "compact_enc_det/compact_enc_det.h"
 
 #include <math.h>                       // for sqrt
@@ -192,9 +198,6 @@ static const int kGentlePairWhack = 2 * XLOG2;       // bits of whack
 static const int kGentlePairBoost = 2 * XLOG2;       // bits of boost
                                             // for well-formed sequence
 
-static const int kBoostPerB64Byte = 2 * XLOG2;       // bits of boost for
-                                            // one good pair in Hz, etc.
-
 static const int kDeclaredEncBoost = 5 * XDECILOG2;  // bits/10 of boost for
                                             // best declared encoding per bigram
 
@@ -334,11 +337,11 @@ static int doing_used = 0;
 // For debugging only -- about 256B/entry times about 500 = 128KB
 // TODO: only allocate this if being used
 typedef struct {
-  int offset;
-  int best_enc;     // Best ranked encoding for this bigram, or
-                    // -1 for overhead entries
-  string label;
-  int detail_enc_prob[NUM_RANKEDENCODING];
+  int offset = 0;
+  int best_enc = -1;  // Best ranked encoding for this bigram, or
+                      // -1 for overhead entries
+  string label = "";
+  int detail_enc_prob[NUM_RANKEDENCODING] = {};
 } DetailEntry;
 
 static int watch1_rankedenc = -1;     // Debug. not threadsafe
@@ -1495,7 +1498,7 @@ int ApplyCompressedProb(const unsigned char* iprob, int len,
   // Continue with first byte and subsequent ones
   while (prob < problimit) {
     int skiptake = *prob++;
-    int skip = (skiptake & 0xf0) >> 4;
+    ptrdiff_t skip = (skiptake & 0xf0) >> 4;
     int take = skiptake & 0x0f;
     if (skiptake == 00) {
       break;
@@ -1876,10 +1879,9 @@ int ApplyUILanguageHint(const Language language_hint,
 }
 
 // Apply initial probability hint based on corpus type (web, email, etc)
-// Weight is 0..100 percent IGNORED
 // Return 1 if name match found
 int ApplyDefaultHint(const CompactEncDet::TextCorpusType corpus_type,
-                      int weight, DetectEncodingState* destatep) {
+                      DetectEncodingState* destatep) {
 
   for (int i = 0; i < NUM_RANKEDENCODING; i++) {
     // Set the default probability
@@ -1890,7 +1892,6 @@ int ApplyDefaultHint(const CompactEncDet::TextCorpusType corpus_type,
     if (SevenBitEncoding(kMapToEncoding[i])) {
       destatep->enc_prob[i] = 0;
     }
-    (void)weight;
   }
 
   //  A little corpus distinction
@@ -2097,7 +2098,7 @@ void ApplyHints(const char* url_hint,
   if (hint_count == 0) {
     destatep->looking_for_latin_trigrams = true;    // Default needs trigrams
     destatep->declared_enc_2 = destatep->declared_enc_1;
-    hint_count += ApplyDefaultHint(corpus_type, 100, destatep);
+    hint_count += ApplyDefaultHint(corpus_type, destatep);
   }
 
 
@@ -2557,7 +2558,7 @@ void UTF7BoostWhack(DetectEncodingState* destatep, int next_pair, uint8 byte2) {
 }
 
 // Boost, whack, or leave alone HZ probablilty
-void HzBoostWhack(DetectEncodingState* destatep, uint8 byte1, uint8 byte2) {
+void HzBoostWhack(DetectEncodingState* destatep, uint8 byte2) {
   if ((byte2 == '{') || (byte2 == '}')) {
     Boost(destatep, F_HZ_GB_2312, kBoostOnePair);         // Found ~{ or ~}
   } else if ((byte2 == '~') || (byte2 == '\n')) {
@@ -2565,7 +2566,6 @@ void HzBoostWhack(DetectEncodingState* destatep, uint8 byte1, uint8 byte2) {
   } else {
     Whack(destatep, F_HZ_GB_2312, kBadPairWhack);         // Illegal pair
   }
-  (void)byte1;
 }
 
 // Boost, whack, or leave alone BINARY probablilty
@@ -2799,14 +2799,6 @@ int CheckUTF8UTF8Seq(DetectEncodingState* destatep, int weightshift) {
   return total_boost;
 }
 
-
-// boost, whack, or leave alone UTF-32 probablilty
-// Expecting 0000PPxx 0000QQxx where PP mostly = QQ (UTF-32BE)
-// Expecting xxPP0000 xxQQ0000 where PP mostly = QQ (UTF-32LE)
-void CheckUTF32ActiveSeq(DetectEncodingState* destatep) {
-  (void)destatep;// Not needed
-  //return;
-}
 
 // We give a gentle boost for each paired SO ... SI, whack others
 void CheckIso2022ActiveSeq(DetectEncodingState* destatep) {
@@ -3053,7 +3045,7 @@ void ActiveSpecialBoostWhack(const uint8* src, DetectEncodingState* destatep) {
         }
       } else if (byte1 == '~') {
         // Boost, whack, or leave alone HZ probablilty
-        HzBoostWhack(destatep, byte1, byte2);
+        HzBoostWhack(destatep, byte2);
         if (destatep->debug_data != nullptr) {
           // Show Hz entry
           char buff[16];
@@ -3126,18 +3118,12 @@ void ActiveSpecialBoostWhack(const uint8* src, DetectEncodingState* destatep) {
     }         // End for i
 
     // Adjust per entire-pair-span
-    int utf8_boost = 0;
-    int utf8utf8_boost = 0;
     if (UTF8Active(destatep)) {
-      utf8_boost = CheckUTF8Seq(destatep, biggest_weightshift);
+      CheckUTF8Seq(destatep, biggest_weightshift);
     }
 
     if (UTF8UTF8Active(destatep)) {
-      utf8utf8_boost = CheckUTF8UTF8Seq(destatep, biggest_weightshift);
-    }
-
-    if (UTF1632Active(destatep)) {
-      CheckUTF32ActiveSeq(destatep);
+      CheckUTF8UTF8Seq(destatep, biggest_weightshift);
     }
 
     if (Iso2022Active(destatep)) {
@@ -3428,7 +3414,6 @@ static const char kMapToFiveBits[256] = {
 #undef HU
 #undef Hc
 
-static const int kTriNoneLikely = 0;
 static const int kTriLatin1Likely = 1;
 static const int kTriLatin2Likely = 2;
 static const int kTriLatin7Likely = 3;
@@ -4552,7 +4537,6 @@ bool QuickPrintableAsciiScan(const char* text, int text_length) {
 }
 
 static const int kMaxScanBack = 192;
-static const int kMaxScanForward = 64;
 
 // Return true if text is inside a tag or JS comment
 bool TextInsideTag(const uint8* isrc, const uint8* src, const uint8* srclimit) {
@@ -4603,7 +4587,7 @@ bool TextInsideTag(const uint8* isrc, const uint8* src, const uint8* srclimit) {
   return false;
 }
 
-const uint8* SkipToTagEnd(const uint8* isrc, const uint8* src, const uint8* srclimit) {
+const uint8* SkipToTagEnd(const uint8* src, const uint8* srclimit) {
   const uint8* ss = src + 1;
   while (ss <= srclimit) {
     uint8 c = *ss++;
@@ -4611,7 +4595,6 @@ const uint8* SkipToTagEnd(const uint8* isrc, const uint8* src, const uint8* srcl
       return ss;
     }
   }
-  (void)isrc;
   return src + 2;     // Always make progress, Otherwise we get an infinite loop
 }
 
@@ -5252,7 +5235,7 @@ Encoding InternalDetectEncoding(
         if (TextInsideTag(isrc, src, srclimitslow2)) {
           if (tag_text_bigram_count >= kMaxBigramsTagTitleText) {
             ignored_some_tag_text = true;
-            src = SkipToTagEnd(destate.last_pair + 2, src, srclimitslow2);
+            src = SkipToTagEnd(src, srclimitslow2);
             continue;
           } else {
             weightshift = kWeightshiftForTagTitleText;
@@ -5271,7 +5254,7 @@ Encoding InternalDetectEncoding(
         src += exit_reason;               // 1 Ascii, 2 other
       } else {
         src += exit_reason;               // 1 Ascii, 2 other
-        //// src = SkipToTagEnd(destate.last_pair, src, srclimitslow2);
+        //// src = SkipToTagEnd(src, srclimitslow2);
       }
 
       if (pruned) {
