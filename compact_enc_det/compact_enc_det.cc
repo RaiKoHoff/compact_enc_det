@@ -1374,8 +1374,8 @@ void PsMark(const uint8* src, int len, const uint8* isrc, int weightshift) {
 // Unfortunately, we have to skip back N lines since source was printed for
 // up to 8 bigrams before we get here. Match on src+1 to handle 0/31 better
 void PsHighlight(const uint8* src, const uint8* isrc, int trigram_val, int n) {
-  auto offset = src ? static_cast<int>((src + 1) - (isrc ? isrc : (const uint8*)0)) :
-                      static_cast<int>((const uint8*)1 - (isrc ? isrc : (const uint8*)0));
+  auto offset = src ? static_cast<int>((src + 1) - isrc) :
+                      static_cast<int>((const uint8*)1 - isrc);
   int offset32 = (offset % pssourcewidth);    // mod len bytes
   offset -= offset32;                         // round down to multiple of len bytes
 
