@@ -20,7 +20,7 @@
 #include "util/encodings/encodings.h"  // for Encoding
 #include "util/languages/languages.h"  // for Language
 
-#include <string.h>
+#include <cstring>
 
 namespace CompactEncDet {
   // We may want different statistics, depending on whether the text being
