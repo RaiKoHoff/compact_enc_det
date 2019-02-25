@@ -20,7 +20,7 @@
 #include "util/encodings/encodings.h"  // for Encoding
 #include "util/languages/languages.h"  // for Language
 
-#include <string.h>
+#include <cstring>
 
 namespace CompactEncDet {
   // We may want different statistics, depending on whether the text being
@@ -77,7 +77,7 @@ namespace CompactEncDet {
   Encoding TopEncodingOfLangHint(const char* name);
   Encoding TopEncodingOfTLDHint(const char* name);
   Encoding TopEncodingOfCharsetHint(const char* name);
-  const char* Version(void);
+  const char* Version();
 }      // End namespace CompactEncDet
 
 #endif  // COMPACT_ENC_DET_COMPACT_ENC_DET_H_
